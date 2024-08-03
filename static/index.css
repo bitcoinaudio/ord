@@ -1,11 +1,11 @@
 :root {
   --common: grey;
-  --dark-bg: #131516;
+  --dark-bg:  rgb(29 29 29);
   --dark-fg: #98a3ad;
   --epic: darkorchid;
   --legendary: gold;
-  --light-bg: #292c2f;
-  --light-fg: #a1adb8;
+  --light-bg: #000000;
+  --light-fg: #f0d800;
   --link: #4169e1;
   --mythic: #f2a900;
   --rare: cornflowerblue;
