@@ -274,7 +274,7 @@ impl Server {
         .layer(Extension(settings.clone()))
         .layer(SetResponseHeaderLayer::if_not_present(
           header::CONTENT_SECURITY_POLICY,
-          HeaderValue::from_static("default-src 'self'"),
+          HeaderValue::from_static("default-src 'self' *"),
         ))
         .layer(SetResponseHeaderLayer::overriding(
           header::STRICT_TRANSPORT_SECURITY,
@@ -495,7 +495,7 @@ impl Server {
         (
           [(
             header::CONTENT_SECURITY_POLICY,
-            HeaderValue::from_static("default-src 'unsafe-inline'"),
+            HeaderValue::from_static("default-src 'unsafe-inline' *"),
           )],
           ClockSvg::new(Self::index_height(&index)?),
         )
@@ -1207,7 +1207,7 @@ impl Server {
             (header::CONTENT_TYPE, "application/rss+xml"),
             (
               header::CONTENT_SECURITY_POLICY,
-              "default-src 'unsafe-inline'",
+              "default-src 'unsafe-inline' *",
             ),
           ],
           builder.build().to_string(),
@@ -1423,7 +1423,7 @@ impl Server {
     headers.insert(
       header::CONTENT_SECURITY_POLICY,
       HeaderValue::from_str(&format!(
-        "default-src 'self' {proxy} 'unsafe-eval' 'unsafe-inline' data: blob:"
+        "default-src 'self' {proxy} 'unsafe-eval' 'unsafe-inline' data: blob: *"
       ))
       .map_err(|err| ServerError::Internal(Error::from(err)))?,
     );
@@ -1510,15 +1510,15 @@ impl Server {
       None => {
         headers.insert(
           header::CONTENT_SECURITY_POLICY,
-          HeaderValue::from_static("default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob:"),
+          HeaderValue::from_static("default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob: *"),
         );
         headers.append(
           header::CONTENT_SECURITY_POLICY,
-          HeaderValue::from_static("default-src *:*/content/ *:*/blockheight *:*/blockhash *:*/blockhash/ *:*/blocktime *:*/r/ 'unsafe-eval' 'unsafe-inline' data: blob:"),
+          HeaderValue::from_static("default-src *:*/content/ *:*/blockheight *:*/blockhash *:*/blockhash/ *:*/blocktime *:*/r/ 'unsafe-eval' 'unsafe-inline' data: blob: *"),
         );
       }
       Some(origin) => {
-        let csp = format!("default-src {origin}/content/ {origin}/blockheight {origin}/blockhash {origin}/blockhash/ {origin}/blocktime {origin}/r/ 'unsafe-eval' 'unsafe-inline' data: blob:");
+        let csp = format!("default-src {origin}/content/ {origin}/blockheight {origin}/blockhash {origin}/blockhash/ {origin}/blocktime {origin}/r/ 'unsafe-eval' 'unsafe-inline' data: blob: *");
         headers.insert(
           header::CONTENT_SECURITY_POLICY,
           HeaderValue::from_str(&csp).map_err(|err| ServerError::Internal(Error::from(err)))?,
@@ -4464,7 +4464,7 @@ mod tests {
 
     assert_eq!(
       headers["content-security-policy"],
-      HeaderValue::from_static("default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob:")
+      HeaderValue::from_static("default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob: *")
     );
   }
 
@@ -4485,7 +4485,7 @@ mod tests {
     .unwrap()
     .unwrap();
 
-    assert_eq!(headers["content-security-policy"], HeaderValue::from_static("default-src https://ordinals.com/content/ https://ordinals.com/blockheight https://ordinals.com/blockhash https://ordinals.com/blockhash/ https://ordinals.com/blocktime https://ordinals.com/r/ 'unsafe-eval' 'unsafe-inline' data: blob:"));
+    assert_eq!(headers["content-security-policy"], HeaderValue::from_static("default-src https://ordinals.com/content/ https://ordinals.com/blockheight https://ordinals.com/blockhash https://ordinals.com/blockhash/ https://ordinals.com/blocktime https://ordinals.com/r/ 'unsafe-eval' 'unsafe-inline' data: blob: *"));
   }
 
   #[test]
@@ -4507,7 +4507,7 @@ mod tests {
       server.assert_response_csp(
         format!("/preview/{}", inscription_id),
         StatusCode::OK,
-        "default-src 'self'",
+        "default-src 'self' *",
         format!(".*<html lang=en data-inscription={}>.*", inscription_id),
       );
     }
@@ -4621,7 +4621,7 @@ mod tests {
     server.assert_response_csp(
       format!("/preview/{}", inscription_id),
       StatusCode::OK,
-      "default-src 'self'",
+      "default-src 'self' *",
       format!(".*<html lang=en data-inscription={}>.*", inscription_id),
     );
   }
@@ -4727,7 +4727,7 @@ mod tests {
     server.assert_response_csp(
       format!("/preview/{inscription_id}"),
       StatusCode::OK,
-      "default-src 'self' 'unsafe-inline'",
+      "default-src 'self' 'unsafe-inline' *",
       format!(r".*background-image: url\(/content/{inscription_id}\);.*"),
     );
   }
@@ -4752,7 +4752,7 @@ mod tests {
     server.assert_response_csp(
       format!("/preview/{}", InscriptionId { txid, index: 0 }),
       StatusCode::OK,
-      "default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob:",
+      "default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob: *",
       "hello",
     );
   }
@@ -4772,7 +4772,7 @@ mod tests {
     server.assert_response_csp(
       format!("/preview/{}", InscriptionId { txid, index: 0 }),
       StatusCode::OK,
-      "default-src 'self'",
+      "default-src 'self' *",
       fs::read_to_string("templates/preview-unknown.html").unwrap(),
     );
   }
