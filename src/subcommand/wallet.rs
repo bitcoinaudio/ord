@@ -1,6 +1,7 @@
 use {
   super::*,
   crate::wallet::{batch, wallet_constructor::WalletConstructor, ListDescriptorsResult, Wallet},
+  bitcoin::Psbt,
   shared_args::SharedArgs,
 };
 
@@ -15,6 +16,7 @@ pub mod inscribe;
 pub mod inscriptions;
 mod label;
 pub mod mint;
+pub mod offer;
 pub mod outputs;
 pub mod pending;
 pub mod receive;
@@ -68,6 +70,8 @@ pub(crate) enum Subcommand {
   Label,
   #[command(about = "Mint a rune")]
   Mint(mint::Mint),
+  #[command(subcommand, about = "Offer commands")]
+  Offer(offer::Offer),
   #[command(about = "List all unspent outputs in wallet")]
   Outputs(outputs::Outputs),
   #[command(about = "List pending etchings")]
@@ -126,6 +130,7 @@ impl WalletCommand {
       Subcommand::Inscriptions => inscriptions::run(wallet),
       Subcommand::Label => label::run(wallet),
       Subcommand::Mint(mint) => mint.run(wallet),
+      Subcommand::Offer(offer) => offer.run(wallet),
       Subcommand::Outputs(outputs) => outputs.run(wallet),
       Subcommand::Pending(pending) => pending.run(wallet),
       Subcommand::Receive(receive) => receive.run(wallet),
@@ -136,6 +141,28 @@ impl WalletCommand {
       Subcommand::Sign(sign) => sign.run(wallet),
       Subcommand::Split(split) => split.run(wallet),
       Subcommand::Transactions(transactions) => transactions.run(wallet),
+    }
+  }
+
+  fn parse_metadata(cbor: Option<PathBuf>, json: Option<PathBuf>) -> Result<Option<Vec<u8>>> {
+    match (cbor, json) {
+      (None, None) => Ok(None),
+      (Some(path), None) => {
+        let cbor = fs::read(path)?;
+        let _value: Value = ciborium::from_reader(Cursor::new(cbor.clone()))
+          .context("failed to parse CBOR metadata")?;
+
+        Ok(Some(cbor))
+      }
+      (None, Some(path)) => {
+        let value: serde_json::Value =
+          serde_json::from_reader(File::open(path)?).context("failed to parse JSON metadata")?;
+        let mut cbor = Vec::new();
+        ciborium::into_writer(&value, &mut cbor)?;
+
+        Ok(Some(cbor))
+      }
+      (Some(_), Some(_)) => panic!(),
     }
   }
 }

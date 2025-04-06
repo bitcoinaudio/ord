@@ -4,14 +4,18 @@ use {
   self::{command_builder::CommandBuilder, expected::Expected, test_server::TestServer},
   bitcoin::{
     address::{Address, NetworkUnchecked},
-    Amount, Network, OutPoint, Sequence, Txid, Witness,
+    blockdata::locktime::absolute::LockTime,
+    opcodes, script,
+    transaction::Version,
+    Amount, Network, OutPoint, Psbt, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness,
   },
   chrono::{DateTime, Utc},
   executable_path::executable_path,
   mockcore::TransactionTemplate,
   ord::{
-    api, chain::Chain, outgoing::Outgoing, subcommand::runes::RuneInfo, wallet::batch,
-    wallet::ListDescriptorsResult, InscriptionId, RuneEntry,
+    api, base64_decode, base64_encode, chain::Chain, decimal::Decimal, outgoing::Outgoing,
+    subcommand::runes::RuneInfo, templates::InscriptionHtml, wallet::batch,
+    wallet::ListDescriptorsResult, Inscription, InscriptionId, RuneEntry,
   },
   ordinals::{
     Artifact, Charm, Edict, Pile, Rarity, Rune, RuneId, Runestone, Sat, SatPoint, SpacedRune,
@@ -101,16 +105,18 @@ fn sats(
     .run_and_deserialize_output::<Vec<ord::subcommand::wallet::sats::OutputRare>>()
 }
 
-fn inscribe_with_postage(
+fn inscribe_with_options(
   core: &mockcore::Handle,
   ord: &TestServer,
   postage: Option<u64>,
+  fee_rate: u64,
 ) -> (InscriptionId, Txid) {
   core.mine_blocks(1);
 
   let mut command_str = format!(
-    "--chain {} wallet inscribe --fee-rate 1 --file foo.txt",
-    core.network()
+    "--chain {} wallet inscribe --fee-rate {} --file foo.txt",
+    core.network(),
+    fee_rate,
   );
 
   if let Some(postage_value) = postage {
@@ -131,7 +137,7 @@ fn inscribe_with_postage(
 }
 
 fn inscribe(core: &mockcore::Handle, ord: &TestServer) -> (InscriptionId, Txid) {
-  inscribe_with_postage(core, ord, None)
+  inscribe_with_options(core, ord, None, 1)
 }
 
 fn drain(core: &mockcore::Handle, ord: &TestServer) {
@@ -368,9 +374,9 @@ fn batch(core: &mockcore::Handle, ord: &TestServer, batchfile: batch::File) -> E
   <dt>turbo</dt>
   <dd>{turbo}</dd>
   <dt>etching</dt>
-  <dd><a class=monospace href=/tx/{reveal}>{reveal}</a></dd>
+  <dd><a class=collapse href=/tx/{reveal}>{reveal}</a></dd>
   <dt>parent</dt>
-  <dd><a class=monospace href=/inscription/{parent}>{parent}</a></dd>
+  <dd><a class=collapse href=/inscription/{parent}>{parent}</a></dd>
 .*",
       mint_definition.join("\\s+"),
     ),

@@ -1,4 +1,4 @@
-use {super::*, base64::Engine, bitcoin::psbt::Psbt};
+use super::*;
 
 #[test]
 fn inscriptions_can_be_sent() {
@@ -39,7 +39,7 @@ fn inscriptions_can_be_sent() {
   <dd>text/plain;charset=utf-8</dd>
   .*
   <dt>location</dt>
-  <dd><a class=monospace href=/satpoint/{send_txid}:0:0>{send_txid}:0:0</a></dd>
+  <dd><a class=collapse href=/satpoint/{send_txid}:0:0>{send_txid}:0:0</a></dd>
   .*
 </dl>
 .*",
@@ -153,7 +153,7 @@ fn send_inscription_by_sat() {
   ord.assert_response_regex(
     format!("/inscription/{inscription}"),
     format!(
-      ".*<h1>Inscription 0</h1>.*<dt>address</dt>.*<dd class=monospace><a href=/address/{address}>{address}</a></dd>.*<dt>location</dt>.*<dd><a class=monospace href=/satpoint/{send_txid}:0:0>{send_txid}:0:0</a></dd>.*",
+      ".*<h1>Inscription 0</h1>.*<dt>address</dt>.*<dd><a class=collapse href=/address/{address}>{address}</a></dd>.*<dt>location</dt>.*<dd><a class=collapse href=/satpoint/{send_txid}:0:0>{send_txid}:0:0</a></dd>.*",
     ),
   );
 }
@@ -345,7 +345,12 @@ inscriptions:
     output_json,
     api::Output {
       address: Some(destination.clone()),
-      inscriptions: vec![
+      confirmations: 1,
+      outpoint: OutPoint {
+        txid: reveal_txid,
+        vout: 0
+      },
+      inscriptions: Some(vec![
         InscriptionId {
           txid: reveal_txid,
           index: 0
@@ -358,9 +363,9 @@ inscriptions:
           txid: reveal_txid,
           index: 2
         },
-      ],
+      ]),
       indexed: true,
-      runes: BTreeMap::new(),
+      runes: None,
       sat_ranges: Some(vec![(5_000_000_000, 5_000_030_000)]),
       script_pubkey: destination.assume_checked_ref().script_pubkey(),
       spent: false,
@@ -656,18 +661,14 @@ fn send_dry_run() {
 
   assert!(core.mempool().is_empty());
   assert_eq!(
-    Psbt::deserialize(
-      &base64::engine::general_purpose::STANDARD
-        .decode(output.psbt)
-        .unwrap()
-    )
-    .unwrap()
-    .fee()
-    .unwrap()
-    .to_sat(),
+    Psbt::deserialize(&base64_decode(&output.psbt).unwrap())
+      .unwrap()
+      .fee()
+      .unwrap()
+      .to_sat(),
     output.fee
   );
-  assert_eq!(output.outgoing, Outgoing::InscriptionId(inscription));
+  assert_eq!(output.asset, Outgoing::InscriptionId(inscription));
 }
 
 #[test]
